@@ -16,11 +16,12 @@ class SymbolicReconstruct():
         self.model = model
         self.multi_solutions = None
 
-        test_path = re.findall(r".*\/", save_path)[0] 
-        if os.path.isdir(test_path):
-            self.save_path = save_path
-        else:
-            raise NotADirectoryError(f"{save_path} is not a valid directory")
+        if save_path:
+            test_path = re.findall(r".*\/", save_path)[0] 
+            if os.path.isdir(test_path):
+                self.save_path = save_path
+            else:
+                raise NotADirectoryError(f"{save_path} is not a valid directory")
         
         
 
@@ -34,7 +35,7 @@ class SymbolicReconstruct():
         imfs = ceemdan(series)  # Decompondo a série
         return imfs
     
-    def fit(self, X, y, y_decompose=None, use_indexes=None, seed=None):
+    def fit(self, X, y, y_decompose=None, seed=None):
         if (X.shape[1] != 1) or (y.shape[1] != 1):
             raise ValueError("Expected a 2D array for X and y.")
         
@@ -48,6 +49,7 @@ class SymbolicReconstruct():
             self.decomposition = self.ceemdan_decompose(self.y, seed)
             self.y_decompose = self.decomposition.copy()
 
+    def set_use_indexes(self, use_indexes):
         self.use_indexes = use_indexes
         if use_indexes is not None:
             self.y_decompose = self.y_decompose[use_indexes]
@@ -80,7 +82,7 @@ class SymbolicReconstruct():
 
         return solutions
     
-    def multiple_reconstruct(self, n_times):
+    def multiple_reconstruct(self, n_times, add_path_name=None):
         
         solutions = []
         for n in range(n_times):
@@ -90,10 +92,23 @@ class SymbolicReconstruct():
 
         self.multi_solutions = solutions
         
-        sol_path = re.findall(r".*\/", self.save_path)[0] + "multi_reconstruct.pkl"
 
-        with open(sol_path, "wb") as file:
-            pickle.dump(solutions, file)
+        if self.save_path:
+            if add_path_name:
+                sol_path = re.findall(r".*\/", self.save_path)[0] + f"multi_reconstruct-{add_path_name}.pkl"
+            else:
+                sol_path = re.findall(r".*\/", self.save_path)[0] + f"multi_reconstruct.pkl"
+
+            with open(sol_path, "wb") as file:
+                pickle.dump(solutions, file)
+
+    def fit_solutions(self, solutions=None, solutions_file=None):
+        if solutions is not None:
+            self.multi_solutions = solutions
+        elif solutions_file is not None:
+            with open(solutions_file, "rb") as file:
+                self.multi_solutions = pickle.load(file)
+
 
     def get_best_reconstruction(self, solutions_file=None):
         """
